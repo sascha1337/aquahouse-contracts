@@ -39,7 +39,7 @@ fn setup_test() -> OwnedDeps<MockStorage, MockApi, CustomQuerier> {
         InstantiateMsg {
             cw20_code_id: 69420,
             owner: "larry".to_string(),
-            name: "Steak Token".to_string(),
+            name: "AquaX Token".to_string(),
             symbol: "STEAK".to_string(),
             decimals: 6,
             epoch_period: 259200,   // 3 * 24 * 60 * 60 = 3 days
@@ -57,7 +57,7 @@ fn setup_test() -> OwnedDeps<MockStorage, MockApi, CustomQuerier> {
                 admin: Some("larry".to_string()),
                 code_id: 69420,
                 msg: to_binary(&Cw20InstantiateMsg {
-                    name: "Steak Token".to_string(),
+                    name: "AquaX Token".to_string(),
                     symbol: "STEAK".to_string(),
                     decimals: 6,
                     initial_balances: vec![],
@@ -123,8 +123,8 @@ fn proper_instantiation() {
     assert_eq!(
         res,
         StateResponse {
-            total_usteak: Uint128::zero(),
-            total_uluna: Uint128::zero(),
+            total_uaquax: Uint128::zero(),
+            total_ujuno: Uint128::zero(),
             exchange_rate: Decimal::one(),
             unlocked_coins: vec![],
         },
@@ -135,7 +135,7 @@ fn proper_instantiation() {
         res,
         PendingBatch {
             id: 1,
-            usteak_to_burn: Uint128::zero(),
+            uaquax_to_burn: Uint128::zero(),
             est_unbond_start_time: 269200, // 10,000 + 259,200
         },
     );
@@ -150,7 +150,7 @@ fn bonding() {
     let res = execute(
         deps.as_mut(),
         mock_env(),
-        mock_info("user_1", &[Coin::new(1000000, "uluna")]),
+        mock_info("user_1", &[Coin::new(1000000, "ujuno")]),
         ExecuteMsg::Bond {
             receiver: None,
         },
@@ -180,8 +180,8 @@ fn bonding() {
         }
     );
 
-    // Bond when there are existing delegations, and Luna:Steak exchange rate is >1
-    // Previously user 1 delegated 1,000,000 uluna. We assume we have accumulated 2.5% yield at 1025000 staked
+    // Bond when there are existing delegations, and Juno:AquaX exchange rate is >1
+    // Previously user 1 delegated 1,000,000 ujuno. We assume we have accumulated 2.5% yield at 1025000 staked
     deps.querier.set_staking_delegations(&[
         Delegation::new("alice", 341667),
         Delegation::new("bob", 341667),
@@ -193,7 +193,7 @@ fn bonding() {
     let res = execute(
         deps.as_mut(),
         mock_env(),
-        mock_info("user_2", &[Coin::new(12345, "uluna")]),
+        mock_info("user_2", &[Coin::new(12345, "ujuno")]),
         ExecuteMsg::Bond {
             receiver: Some("user_3".to_string()),
         },
@@ -235,8 +235,8 @@ fn bonding() {
     assert_eq!(
         res,
         StateResponse {
-            total_usteak: Uint128::new(1012043),
-            total_uluna: Uint128::new(1037345),
+            total_uaquax: Uint128::new(1012043),
+            total_ujuno: Uint128::new(1037345),
             exchange_rate: Decimal::from_ratio(1037345u128, 1012043u128),
             unlocked_coins: vec![],
         }
@@ -247,7 +247,7 @@ fn bonding() {
 fn harvesting() {
     let mut deps = setup_test();
 
-    // Assume users have bonded a total of 1,000,000 uluna and minted the same amount of usteak
+    // Assume users have bonded a total of 1,000,000 ujuno and minted the same amount of uaquax
     deps.querier.set_staking_delegations(&[
         Delegation::new("alice", 341667),
         Delegation::new("bob", 341667),
@@ -314,7 +314,7 @@ fn registering_unlocked_coins() {
     // After withdrawing staking rewards, we parse the `coin_received` event to find the received amounts
     let event = Event::new("coin_received")
         .add_attribute("receiver", MOCK_CONTRACT_ADDR.to_string())
-        .add_attribute("amount", "123ukrw,234uluna,345uusd,69420ibc/0471F1C4E7AFD3F07702BEF6DC365268D64570F7C1FDC98EA6098DD6DE59817B");
+        .add_attribute("amount", "123ukrw,234ujuno,345uusd,69420ibc/0471F1C4E7AFD3F07702BEF6DC365268D64570F7C1FDC98EA6098DD6DE59817B");
 
     reply(
         deps.as_mut(),
@@ -335,7 +335,7 @@ fn registering_unlocked_coins() {
         unlocked_coins,
         vec![
             Coin::new(123, "ukrw"),
-            Coin::new(234, "uluna"),
+            Coin::new(234, "ujuno"),
             Coin::new(345, "uusd"),
             Coin::new(69420, "ibc/0471F1C4E7AFD3F07702BEF6DC365268D64570F7C1FDC98EA6098DD6DE59817B"),
         ]
@@ -353,13 +353,13 @@ fn reinvesting() {
         Delegation::new("charlie", 333333),
     ]);
 
-    // After the swaps, `unlocked_coins` should contain only uluna and unknown denoms
+    // After the swaps, `unlocked_coins` should contain only ujuno and unknown denoms
     state
         .unlocked_coins
         .save(
             deps.as_mut().storage,
             &vec![
-                Coin::new(234, "uluna"),
+                Coin::new(234, "ujuno"),
                 Coin::new(69420, "ibc/0471F1C4E7AFD3F07702BEF6DC365268D64570F7C1FDC98EA6098DD6DE59817B"),
             ],
         )
@@ -398,7 +398,7 @@ fn queuing_unbond() {
     let mut deps = setup_test();
     let state = State::default();
 
-    // Only Steak token is accepted for unbonding requests
+    // Only AquaX token is accepted for unbonding requests
     let err = execute(
         deps.as_mut(),
         mock_env(),
@@ -414,7 +414,7 @@ fn queuing_unbond() {
     )
     .unwrap_err();
 
-    assert_eq!(err, StdError::generic_err("expecting Steak token, received random_token"));
+    assert_eq!(err, StdError::generic_err("expecting AquaX token, received random_token"));
 
     // User 1 creates an unbonding request before `est_unbond_start_time` is reached. The unbond
     // request is saved, but not the pending batch is not submitted for unbonding
@@ -500,7 +500,7 @@ fn queuing_unbond() {
         pending_batch,
         PendingBatch {
             id: 1,
-            usteak_to_burn: Uint128::new(92876), // 23,456 + 69,420
+            uaquax_to_burn: Uint128::new(92876), // 23,456 + 69,420
             est_unbond_start_time: 269200
         }
     );
@@ -511,9 +511,9 @@ fn submitting_batch() {
     let mut deps = setup_test();
     let state = State::default();
 
-    // uluna bonded: 1,037,345
-    // usteak supply: 1,012,043
-    // uluna per ustake: 1.025
+    // ujuno bonded: 1,037,345
+    // uaquax supply: 1,012,043
+    // ujuno per ustake: 1.025
     deps.querier.set_staking_delegations(&[
         Delegation::new("alice", 345782),
         Delegation::new("bob", 345782),
@@ -552,7 +552,7 @@ fn submitting_batch() {
             deps.as_mut().storage,
             &PendingBatch {
                 id: 1,
-                usteak_to_burn: Uint128::new(92876), // 23,456 + 69,420
+                uaquax_to_burn: Uint128::new(92876), // 23,456 + 69,420
                 est_unbond_start_time: 269200,
             },
         )
@@ -561,8 +561,8 @@ fn submitting_batch() {
     // Anyone can invoke `submit_batch`. Here we continue from the previous test and assume it is
     // invoked automatically as user 2 submits the unbonding request
     //
-    // usteak to burn: 23,456 + 69,420 = 92,876
-    // uluna to unbond: 1,037,345 * 92,876 / 1,012,043 = 95,197
+    // uaquax to burn: 23,456 + 69,420 = 92,876
+    // ujuno to unbond: 1,037,345 * 92,876 / 1,012,043 = 95,197
     //
     // Target: (1,037,345 - 95,197) / 3 = 314,049
     // Remainer: 1
@@ -613,7 +613,7 @@ fn submitting_batch() {
         pending_batch,
         PendingBatch {
             id: 2,
-            usteak_to_burn: Uint128::zero(),
+            uaquax_to_burn: Uint128::zero(),
             est_unbond_start_time: 528401 // 269,201 + 259,200
         }
     );
@@ -626,7 +626,7 @@ fn submitting_batch() {
             id: 1,
             reconciled: false,
             total_shares: Uint128::new(92876),
-            uluna_unclaimed: Uint128::new(95197),
+            ujuno_unclaimed: Uint128::new(95197),
             est_unbond_end_time: 2083601 // 269,201 + 1,814,400
         }
     );
@@ -642,28 +642,28 @@ fn reconciling() {
             id: 1,
             reconciled: true,
             total_shares: Uint128::new(92876),
-            uluna_unclaimed: Uint128::new(95197), // 1.025 Luna per Steak
+            ujuno_unclaimed: Uint128::new(95197), // 1.025 Juno per AquaX
             est_unbond_end_time: 10000,
         },
         Batch {
             id: 2,
             reconciled: false,
             total_shares: Uint128::new(1345),
-            uluna_unclaimed: Uint128::new(1385), // 1.030 Luna per Steak
+            ujuno_unclaimed: Uint128::new(1385), // 1.030 Juno per AquaX
             est_unbond_end_time: 20000,
         },
         Batch {
             id: 3,
             reconciled: false,
             total_shares: Uint128::new(1456),
-            uluna_unclaimed: Uint128::new(1506), // 1.035 Luna per Steak
+            ujuno_unclaimed: Uint128::new(1506), // 1.035 Juno per AquaX
             est_unbond_end_time: 30000,
         },
         Batch {
             id: 4,
             reconciled: false,
             total_shares: Uint128::new(1567),
-            uluna_unclaimed: Uint128::new(1629), // 1.040 Luna per Steak
+            ujuno_unclaimed: Uint128::new(1629), // 1.040 Juno per AquaX
             est_unbond_end_time: 40000,          // not yet finished unbonding, ignored
         },
     ];
@@ -680,7 +680,7 @@ fn reconciling() {
         .save(
             deps.as_mut().storage,
             &vec![
-                Coin::new(10000, "uluna"),
+                Coin::new(10000, "ujuno"),
                 Coin::new(234, "ukrw"),
                 Coin::new(345, "uusd"),
                 Coin::new(69420, "ibc/0471F1C4E7AFD3F07702BEF6DC365268D64570F7C1FDC98EA6098DD6DE59817B"),
@@ -689,7 +689,7 @@ fn reconciling() {
         .unwrap();
 
     deps.querier.set_bank_balances(&[
-        Coin::new(12345, "uluna"),
+        Coin::new(12345, "ujuno"),
         Coin::new(234, "ukrw"),
         Coin::new(345, "uusd"),
         Coin::new(69420, "ibc/0471F1C4E7AFD3F07702BEF6DC365268D64570F7C1FDC98EA6098DD6DE59817B"),
@@ -709,7 +709,7 @@ fn reconciling() {
     // Actual: 12345
     // Shortfall: 12891 - 12345 = 456
     //
-    // uluna per batch: 546 / 2 = 273
+    // ujuno per batch: 546 / 2 = 273
     // remainder: 0
     // batch 2: 1385 - 273 = 1112
     // batch 3: 1506 - 273 = 1233
@@ -720,7 +720,7 @@ fn reconciling() {
             id: 2,
             reconciled: true,
             total_shares: Uint128::new(1345),
-            uluna_unclaimed: Uint128::new(1112), // 1385 - 273
+            ujuno_unclaimed: Uint128::new(1112), // 1385 - 273
             est_unbond_end_time: 20000,
         }
     );
@@ -732,7 +732,7 @@ fn reconciling() {
             id: 3,
             reconciled: true,
             total_shares: Uint128::new(1456),
-            uluna_unclaimed: Uint128::new(1233), // 1506 - 273
+            ujuno_unclaimed: Uint128::new(1233), // 1506 - 273
             est_unbond_end_time: 30000,
         }
     );
@@ -798,28 +798,28 @@ fn withdrawing_unbonded() {
             id: 1,
             reconciled: true,
             total_shares: Uint128::new(92876),
-            uluna_unclaimed: Uint128::new(95197), // 1.025 Luna per Steak
+            ujuno_unclaimed: Uint128::new(95197), // 1.025 Juno per AquaX
             est_unbond_end_time: 10000,
         },
         Batch {
             id: 2,
             reconciled: true,
             total_shares: Uint128::new(34567),
-            uluna_unclaimed: Uint128::new(35604), // 1.030 Luna per Steak
+            ujuno_unclaimed: Uint128::new(35604), // 1.030 Juno per AquaX
             est_unbond_end_time: 20000,
         },
         Batch {
             id: 3,
             reconciled: false, // finished unbonding, but not reconciled; ignored
             total_shares: Uint128::new(45678),
-            uluna_unclaimed: Uint128::new(47276), // 1.035 Luna per Steak
+            ujuno_unclaimed: Uint128::new(47276), // 1.035 Juno per AquaX
             est_unbond_end_time: 20000,
         },
         Batch {
             id: 4,
             reconciled: true,
             total_shares: Uint128::new(56789),
-            uluna_unclaimed: Uint128::new(59060), // 1.040 Luna per Steak
+            ujuno_unclaimed: Uint128::new(59060), // 1.040 Juno per AquaX
             est_unbond_end_time: 30000, // reconciled, but not yet finished unbonding; ignored
         },
     ];
@@ -837,7 +837,7 @@ fn withdrawing_unbonded() {
             deps.as_mut().storage,
             &PendingBatch {
                 id: 4,
-                usteak_to_burn: Uint128::new(56789),
+                uaquax_to_burn: Uint128::new(56789),
                 est_unbond_start_time: 100000,
             },
         )
@@ -864,7 +864,7 @@ fn withdrawing_unbonded() {
     //
     // Batch 1 should be updated:
     // Total shares: 92,876 - 23,456 = 69,420
-    // Unclaimed uluna: 95,197 - 24,042 = 71,155
+    // Unclaimed ujuno: 95,197 - 24,042 = 71,155
     //
     // Batch 2 is completely withdrawn, should be purged from storage
     let res = execute(
@@ -884,7 +884,7 @@ fn withdrawing_unbonded() {
             id: 0,
             msg: CosmosMsg::Bank(BankMsg::Send {
                 to_address: "user_1".to_string(),
-                amount: vec![Coin::new(59646, "uluna")]
+                amount: vec![Coin::new(59646, "ujuno")]
             }),
             gas_limit: None,
             reply_on: ReplyOn::Never
@@ -899,7 +899,7 @@ fn withdrawing_unbonded() {
             id: 1,
             reconciled: true,
             total_shares: Uint128::new(69420),
-            uluna_unclaimed: Uint128::new(71155),
+            ujuno_unclaimed: Uint128::new(71155),
             est_unbond_end_time: 10000,
         }
     );
@@ -947,7 +947,7 @@ fn withdrawing_unbonded() {
             id: 0,
             msg: CosmosMsg::Bank(BankMsg::Send {
                 to_address: "user_2".to_string(),
-                amount: vec![Coin::new(71155, "uluna")]
+                amount: vec![Coin::new(71155, "ujuno")]
             }),
             gas_limit: None,
             reply_on: ReplyOn::Never
@@ -1159,28 +1159,28 @@ fn querying_previous_batches() {
             id: 1,
             reconciled: false,
             total_shares: Uint128::new(123),
-            uluna_unclaimed: Uint128::new(678),
+            ujuno_unclaimed: Uint128::new(678),
             est_unbond_end_time: 10000,
         },
         Batch {
             id: 2,
             reconciled: true,
             total_shares: Uint128::new(234),
-            uluna_unclaimed: Uint128::new(789),
+            ujuno_unclaimed: Uint128::new(789),
             est_unbond_end_time: 15000,
         },
         Batch {
             id: 3,
             reconciled: false,
             total_shares: Uint128::new(345),
-            uluna_unclaimed: Uint128::new(890),
+            ujuno_unclaimed: Uint128::new(890),
             est_unbond_end_time: 20000,
         },
         Batch {
             id: 4,
             reconciled: true,
             total_shares: Uint128::new(456),
-            uluna_unclaimed: Uint128::new(999),
+            ujuno_unclaimed: Uint128::new(999),
             est_unbond_end_time: 25000,
         },
     ];
@@ -1378,7 +1378,7 @@ fn computing_redelegations_for_removal() {
     ];
 
     // Suppose Dave will be removed
-    // uluna_per_validator = (13000 + 12000 + 11000 + 10000) / 3 = 15333
+    // ujuno_per_validator = (13000 + 12000 + 11000 + 10000) / 3 = 15333
     // remainder = 1
     // to Alice:   15333 + 1 - 13000 = 2334
     // to Bob:     15333 + 0 - 12000 = 3333
@@ -1405,7 +1405,7 @@ fn computing_redelegations_for_rebalancing() {
         Delegation::new("evan", 2345),
     ];
 
-    // uluna_per_validator = (69420 + 88888 + 1234 + 40471 + 2345) / 4 = 40471
+    // ujuno_per_validator = (69420 + 88888 + 1234 + 40471 + 2345) / 4 = 40471
     // remainer = 3
     // src_delegations:
     //  - alice:   69420 - (40471 + 1) = 28948
@@ -1465,8 +1465,8 @@ fn parsing_coins() {
     let coins = Coins::from_str("12345uatom").unwrap();
     assert_eq!(coins.0, vec![Coin::new(12345, "uatom")]);
 
-    let coins = Coins::from_str("12345uatom,23456uluna").unwrap();
-    assert_eq!(coins.0, vec![Coin::new(12345, "uatom"), Coin::new(23456, "uluna")]);
+    let coins = Coins::from_str("12345uatom,23456ujuno").unwrap();
+    assert_eq!(coins.0, vec![Coin::new(12345, "uatom"), Coin::new(23456, "ujuno")]);
 }
 
 #[test]
@@ -1476,27 +1476,27 @@ fn adding_coins() {
     coins.add(&Coin::new(12345, "uatom")).unwrap();
     assert_eq!(coins.0, vec![Coin::new(12345, "uatom")]);
 
-    coins.add(&Coin::new(23456, "uluna")).unwrap();
-    assert_eq!(coins.0, vec![Coin::new(12345, "uatom"), Coin::new(23456, "uluna")]);
+    coins.add(&Coin::new(23456, "ujuno")).unwrap();
+    assert_eq!(coins.0, vec![Coin::new(12345, "uatom"), Coin::new(23456, "ujuno")]);
 
     coins.add_many(&Coins::from_str("76543uatom,69420uusd").unwrap()).unwrap();
-    assert_eq!(coins.0, vec![Coin::new(88888, "uatom"), Coin::new(23456, "uluna"), Coin::new(69420, "uusd")]);
+    assert_eq!(coins.0, vec![Coin::new(88888, "uatom"), Coin::new(23456, "ujuno"), Coin::new(69420, "uusd")]);
 }
 
 #[test]
 fn receiving_funds() {
-    let err = parse_received_fund(&[], "uluna").unwrap_err();
+    let err = parse_received_fund(&[], "ujuno").unwrap_err();
     assert_eq!(err, StdError::generic_err("must deposit exactly one coin; received 0"));
 
-    let err = parse_received_fund(&[Coin::new(12345, "uatom"), Coin::new(23456, "uluna")], "uluna").unwrap_err();
+    let err = parse_received_fund(&[Coin::new(12345, "uatom"), Coin::new(23456, "ujuno")], "ujuno").unwrap_err();
     assert_eq!(err, StdError::generic_err("must deposit exactly one coin; received 2"));
 
-    let err = parse_received_fund(&[Coin::new(12345, "uatom")], "uluna").unwrap_err();
-    assert_eq!(err, StdError::generic_err("expected uluna deposit, received uatom"));
+    let err = parse_received_fund(&[Coin::new(12345, "uatom")], "ujuno").unwrap_err();
+    assert_eq!(err, StdError::generic_err("expected ujuno deposit, received uatom"));
 
-    let err = parse_received_fund(&[Coin::new(0, "uluna")], "uluna").unwrap_err();
+    let err = parse_received_fund(&[Coin::new(0, "ujuno")], "ujuno").unwrap_err();
     assert_eq!(err, StdError::generic_err("deposit amount must be non-zero"));
 
-    let amount = parse_received_fund(&[Coin::new(69420, "uluna")], "uluna").unwrap();
+    let amount = parse_received_fund(&[Coin::new(69420, "ujuno")], "ujuno").unwrap();
     assert_eq!(amount, Uint128::new(69420));
 }

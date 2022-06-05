@@ -1,6 +1,6 @@
-# Steak: Common Types
+# AquaX: Common Types
 
-This crate contains definitions of common types used in Steak.
+This crate contains definitions of common types used in AquaX.
 
 ## License
 

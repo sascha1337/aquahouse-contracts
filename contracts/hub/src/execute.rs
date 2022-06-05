@@ -34,7 +34,7 @@ pub fn instantiate(deps: DepsMut, env: Env, msg: InstantiateMsg) -> StdResult<Re
         deps.storage,
         &PendingBatch {
             id: 1,
-            usteak_to_burn: Uint128::zero(),
+            uaquax_to_burn: Uint128::zero(),
             est_unbond_start_time: env.block.time.seconds() + msg.epoch_period,
         },
     )?;
@@ -87,11 +87,11 @@ pub fn register_steak_token(deps: DepsMut, response: SubMsgResponse) -> StdResul
 // Bonding and harvesting logics
 //--------------------------------------------------------------------------------------------------
 
-/// NOTE: In a previous implementation, we split up the deposited Luna over all validators, so that
+/// NOTE: In a previous implementation, we split up the deposited Juno over all validators, so that
 /// they all have the same amount of delegation. This is however quite gas-expensive: $1.5 cost in
 /// the case of 15 validators.
 ///
-/// To save gas for users, now we simply delegate all deposited Luna to the validator with the
+/// To save gas for users, now we simply delegate all deposited Juno to the validator with the
 /// smallest amount of delegation. If delegations become severely unbalance as a result of this
 /// (e.g. when a single user makes a very big deposit), anyone can invoke `ExecuteMsg::Rebalance`
 /// to balance the delegations.
@@ -99,7 +99,7 @@ pub fn bond(
     deps: DepsMut,
     env: Env,
     receiver: Addr,
-    uluna_to_bond: Uint128,
+    ujuno_to_bond: Uint128,
 ) -> StdResult<Response> {
     let state = State::default();
     let steak_token = state.steak_token.load(deps.storage)?;
@@ -119,12 +119,12 @@ pub fn bond(
     }
     let new_delegation = Delegation {
         validator: validator.clone(),
-        amount: uluna_to_bond.u128(),
+        amount: ujuno_to_bond.u128(),
     };
 
-    // Query the current supply of Steak and compute the amount to mint
-    let usteak_supply = query_cw20_total_supply(&deps.querier, &steak_token)?;
-    let usteak_to_mint = compute_mint_amount(usteak_supply, uluna_to_bond, &delegations);
+    // Query the current supply of AquaX and compute the amount to mint
+    let uaquax_supply = query_cw20_total_supply(&deps.querier, &steak_token)?;
+    let uaquax_to_mint = compute_mint_amount(uaquax_supply, ujuno_to_bond, &delegations);
 
     let delegate_submsg = SubMsg::reply_on_success(new_delegation.to_cosmos_msg(), 2);
 
@@ -132,7 +132,7 @@ pub fn bond(
         contract_addr: steak_token.into(),
         msg: to_binary(&Cw20ExecuteMsg::Mint {
             recipient: receiver.to_string(),
-            amount: usteak_to_mint,
+            amount: uaquax_to_mint,
         })?,
         funds: vec![],
     });
@@ -141,8 +141,8 @@ pub fn bond(
         .add_attribute("time", env.block.time.seconds().to_string())
         .add_attribute("height", env.block.height.to_string())
         .add_attribute("receiver", receiver)
-        .add_attribute("uluna_bonded", uluna_to_bond)
-        .add_attribute("usteak_minted", usteak_to_mint);
+        .add_attribute("ujuno_bonded", ujuno_to_bond)
+        .add_attribute("uaquax_minted", uaquax_to_mint);
 
     Ok(Response::new()
         .add_submessage(delegate_submsg)
@@ -175,7 +175,7 @@ pub fn harvest(deps: DepsMut, env: Env) -> StdResult<Response> {
 }
 
 /// NOTE:
-/// 1. When delegation Luna here, we don't need to use a `SubMsg` to handle the received coins,
+/// 1. When delegation Juno here, we don't need to use a `SubMsg` to handle the received coins,
 /// because we have already withdrawn all claimable staking rewards previously in the same atomic
 /// execution.
 /// 2. Same as with `bond`, in the latest implementation we only delegate staking rewards with the
@@ -185,10 +185,10 @@ pub fn reinvest(deps: DepsMut, env: Env) -> StdResult<Response> {
     let validators = state.validators.load(deps.storage)?;
     let mut unlocked_coins = state.unlocked_coins.load(deps.storage)?;
 
-    let uluna_to_bond = unlocked_coins
+    let ujuno_to_bond = unlocked_coins
         .iter()
-        .find(|coin| coin.denom == "uluna")
-        .ok_or_else(|| StdError::generic_err("no uluna available to be bonded"))?
+        .find(|coin| coin.denom == "ujuno")
+        .ok_or_else(|| StdError::generic_err("no ujuno available to be bonded"))?
         .amount;
 
     let delegations = query_delegations(&deps.querier, &validators, &env.contract.address)?;
@@ -200,15 +200,15 @@ pub fn reinvest(deps: DepsMut, env: Env) -> StdResult<Response> {
             amount = d.amount;
         }
     }
-    let new_delegation = Delegation::new(validator, uluna_to_bond.u128());
+    let new_delegation = Delegation::new(validator, ujuno_to_bond.u128());
 
-    unlocked_coins.retain(|coin| coin.denom != "uluna");
+    unlocked_coins.retain(|coin| coin.denom != "ujuno");
     state.unlocked_coins.save(deps.storage, &unlocked_coins)?;
 
     let event = Event::new("steakhub/harvested")
         .add_attribute("time", env.block.time.seconds().to_string())
         .add_attribute("height", env.block.height.to_string())
-        .add_attribute("uluna_bonded", uluna_to_bond);
+        .add_attribute("ujuno_bonded", ujuno_to_bond);
 
     Ok(Response::new()
         .add_message(new_delegation.to_cosmos_msg())
@@ -275,12 +275,12 @@ pub fn queue_unbond(
     deps: DepsMut,
     env: Env,
     receiver: Addr,
-    usteak_to_burn: Uint128,
+    uaquax_to_burn: Uint128,
 ) -> StdResult<Response> {
     let state = State::default();
 
     let mut pending_batch = state.pending_batch.load(deps.storage)?;
-    pending_batch.usteak_to_burn += usteak_to_burn;
+    pending_batch.uaquax_to_burn += uaquax_to_burn;
     state.pending_batch.save(deps.storage, &pending_batch)?;
 
     state.unbond_requests.update(
@@ -292,7 +292,7 @@ pub fn queue_unbond(
                 user: receiver.clone(),
                 shares: Uint128::zero(),
             });
-            request.shares += usteak_to_burn;
+            request.shares += uaquax_to_burn;
             Ok(request)
         },
     )?;
@@ -311,7 +311,7 @@ pub fn queue_unbond(
         .add_attribute("height", env.block.height.to_string())
         .add_attribute("id", pending_batch.id.to_string())
         .add_attribute("receiver", receiver)
-        .add_attribute("usteak_to_burn", usteak_to_burn);
+        .add_attribute("uaquax_to_burn", uaquax_to_burn);
 
     Ok(Response::new()
         .add_messages(msgs)
@@ -334,18 +334,18 @@ pub fn submit_batch(deps: DepsMut, env: Env) -> StdResult<Response> {
     }
 
     let delegations = query_delegations(&deps.querier, &validators, &env.contract.address)?;
-    let usteak_supply = query_cw20_total_supply(&deps.querier, &steak_token)?;
+    let uaquax_supply = query_cw20_total_supply(&deps.querier, &steak_token)?;
 
-    let uluna_to_unbond = compute_unbond_amount(usteak_supply, pending_batch.usteak_to_burn, &delegations);
-    let new_undelegations = compute_undelegations(uluna_to_unbond, &delegations);
+    let ujuno_to_unbond = compute_unbond_amount(uaquax_supply, pending_batch.uaquax_to_burn, &delegations);
+    let new_undelegations = compute_undelegations(ujuno_to_unbond, &delegations);
 
-    // NOTE: Regarding the `uluna_unclaimed` value
+    // NOTE: Regarding the `ujuno_unclaimed` value
     //
     // If validators misbehave and get slashed during the unbonding period, the contract can receive
-    // LESS Luna than `uluna_to_unbond` when unbonding finishes!
+    // LESS Juno than `ujuno_to_unbond` when unbonding finishes!
     //
     // In this case, users who invokes `withdraw_unbonded` will have their txs failed as the contract
-    // does not have enough Luna balance.
+    // does not have enough Juno balance.
     //
     // I don't have a solution for this... other than to manually fund contract with the slashed amount.
     state.previous_batches.save(
@@ -354,8 +354,8 @@ pub fn submit_batch(deps: DepsMut, env: Env) -> StdResult<Response> {
         &Batch {
             id: pending_batch.id,
             reconciled: false,
-            total_shares: pending_batch.usteak_to_burn,
-            uluna_unclaimed: uluna_to_unbond,
+            total_shares: pending_batch.uaquax_to_burn,
+            ujuno_unclaimed: ujuno_to_unbond,
             est_unbond_end_time: current_time + unbond_period,
         },
     )?;
@@ -365,7 +365,7 @@ pub fn submit_batch(deps: DepsMut, env: Env) -> StdResult<Response> {
         deps.storage,
         &PendingBatch {
             id: pending_batch.id + 1,
-            usteak_to_burn: Uint128::zero(),
+            uaquax_to_burn: Uint128::zero(),
             est_unbond_start_time: current_time + epoch_period,
         },
     )?;
@@ -378,7 +378,7 @@ pub fn submit_batch(deps: DepsMut, env: Env) -> StdResult<Response> {
     let burn_msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: steak_token.into(),
         msg: to_binary(&Cw20ExecuteMsg::Burn {
-            amount: pending_batch.usteak_to_burn,
+            amount: pending_batch.uaquax_to_burn,
         })?,
         funds: vec![],
     });
@@ -387,8 +387,8 @@ pub fn submit_batch(deps: DepsMut, env: Env) -> StdResult<Response> {
         .add_attribute("time", env.block.time.seconds().to_string())
         .add_attribute("height", env.block.height.to_string())
         .add_attribute("id", pending_batch.id.to_string())
-        .add_attribute("uluna_unbonded", uluna_to_unbond)
-        .add_attribute("usteak_burned", pending_batch.usteak_to_burn);
+        .add_attribute("ujuno_unbonded", ujuno_to_unbond)
+        .add_attribute("uaquax_burned", pending_batch.uaquax_to_burn);
 
     Ok(Response::new()
         .add_submessages(undelegate_submsgs)
@@ -419,20 +419,20 @@ pub fn reconcile(deps: DepsMut, env: Env) -> StdResult<Response> {
         .filter(|b| current_time > b.est_unbond_end_time)
         .collect::<Vec<_>>();
 
-    let uluna_expected_received: Uint128 = batches
+    let ujuno_expected_received: Uint128 = batches
         .iter()
-        .map(|b| b.uluna_unclaimed)
+        .map(|b| b.ujuno_unclaimed)
         .sum();
 
     let unlocked_coins = state.unlocked_coins.load(deps.storage)?;
-    let uluna_expected_unlocked = Coins(unlocked_coins).find("uluna").amount;
+    let ujuno_expected_unlocked = Coins(unlocked_coins).find("ujuno").amount;
 
-    let uluna_expected = uluna_expected_received + uluna_expected_unlocked;
-    let uluna_actual = deps.querier.query_balance(&env.contract.address, "uluna")?.amount;
+    let ujuno_expected = ujuno_expected_received + ujuno_expected_unlocked;
+    let ujuno_actual = deps.querier.query_balance(&env.contract.address, "ujuno")?.amount;
 
-    let uluna_to_deduct = uluna_expected.checked_sub(uluna_actual).unwrap_or_else(|_| Uint128::zero());
-    if !uluna_to_deduct.is_zero() {
-        reconcile_batches(&mut batches, uluna_expected - uluna_actual);
+    let ujuno_to_deduct = ujuno_expected.checked_sub(ujuno_actual).unwrap_or_else(|_| Uint128::zero());
+    if !ujuno_to_deduct.is_zero() {
+        reconcile_batches(&mut batches, ujuno_expected - ujuno_actual);
     }
 
     for batch in &batches {
@@ -447,7 +447,7 @@ pub fn reconcile(deps: DepsMut, env: Env) -> StdResult<Response> {
 
     let event = Event::new("steakhub/reconciled")
         .add_attribute("ids", ids)
-        .add_attribute("uluna_deducted", uluna_to_deduct.to_string());
+        .add_attribute("ujuno_deducted", ujuno_to_deduct.to_string());
 
     Ok(Response::new()
         .add_event(event)
@@ -478,26 +478,26 @@ pub fn withdraw_unbonded(
         })
         .collect::<StdResult<Vec<_>>>()?;
 
-    // NOTE: Luna in the following batches are withdrawn it the batch:
+    // NOTE: Juno in the following batches are withdrawn it the batch:
     // - is a _previous_ batch, not a _pending_ batch
     // - is reconciled
     // - has finished unbonding
     // If not sure whether the batches have been reconciled, the user should first invoke `ExecuteMsg::Reconcile`
     // before withdrawing.
-    let mut total_uluna_to_refund = Uint128::zero();
+    let mut total_ujuno_to_refund = Uint128::zero();
     let mut ids: Vec<String> = vec![];
     for request in &requests {
         if let Ok(mut batch) = state.previous_batches.load(deps.storage, request.id) {
             if batch.reconciled && batch.est_unbond_end_time < current_time {
-                let uluna_to_refund = batch
-                    .uluna_unclaimed
+                let ujuno_to_refund = batch
+                    .ujuno_unclaimed
                     .multiply_ratio(request.shares, batch.total_shares);
 
                 ids.push(request.id.to_string());
 
-                total_uluna_to_refund += uluna_to_refund;
+                total_ujuno_to_refund += ujuno_to_refund;
                 batch.total_shares -= request.shares;
-                batch.uluna_unclaimed -= uluna_to_refund;
+                batch.ujuno_unclaimed -= ujuno_to_refund;
 
                 if batch.total_shares.is_zero() {
                     state.previous_batches.remove(deps.storage, request.id)?;
@@ -510,13 +510,13 @@ pub fn withdraw_unbonded(
         }
     }
 
-    if total_uluna_to_refund.is_zero() {
+    if total_ujuno_to_refund.is_zero() {
         return Err(StdError::generic_err("withdrawable amount is zero"));
     }
 
     let refund_msg = CosmosMsg::Bank(BankMsg::Send {
         to_address: receiver.clone().into(),
-        amount: vec![Coin::new(total_uluna_to_refund.u128(), "uluna")],
+        amount: vec![Coin::new(total_ujuno_to_refund.u128(), "ujuno")],
     });
 
     let event = Event::new("steakhub/unbonded_withdrawn")
@@ -525,7 +525,7 @@ pub fn withdraw_unbonded(
         .add_attribute("ids", ids.join(","))
         .add_attribute("user", user)
         .add_attribute("receiver", receiver)
-        .add_attribute("uluna_refunded", total_uluna_to_refund);
+        .add_attribute("ujuno_refunded", total_ujuno_to_refund);
 
     Ok(Response::new()
         .add_message(refund_msg)
@@ -553,7 +553,7 @@ pub fn rebalance(deps: DepsMut, env: Env) -> StdResult<Response> {
     let amount: u128 = new_redelegations.iter().map(|rd| rd.amount).sum();
 
     let event = Event::new("steakhub/rebalanced")
-        .add_attribute("uluna_moved", amount.to_string());
+        .add_attribute("ujuno_moved", amount.to_string());
 
     Ok(Response::new()
         .add_submessages(redelegate_submsgs)

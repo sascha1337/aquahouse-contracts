@@ -66,13 +66,13 @@ impl CustomQuerier {
             .map(|d| FullDelegation {
                 delegator: Addr::unchecked(MOCK_CONTRACT_ADDR),
                 validator: d.validator.clone(),
-                amount: Coin::new(d.amount, "uluna"),
-                can_redelegate: Coin::new(0, "uluna"),
+                amount: Coin::new(d.amount, "ujuno"),
+                can_redelegate: Coin::new(0, "ujuno"),
                 accumulated_rewards: vec![],
             })
             .collect::<Vec<_>>();
 
-        self.staking_querier = StakingQuerier::new("uluna", &[], &fds);
+        self.staking_querier = StakingQuerier::new("ujuno", &[], &fds);
     }
 
     pub fn handle_query(&self, request: &QueryRequest<Empty>) -> QuerierResult {

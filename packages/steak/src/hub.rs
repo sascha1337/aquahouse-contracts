@@ -28,11 +28,11 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     /// Implements the Cw20 receiver interface
     Receive(Cw20ReceiveMsg),
-    /// Bond specified amount of Luna
+    /// Bond specified amount of Juno
     Bond {
         receiver: Option<String>,
     },
-    /// Withdraw Luna that have finished unbonding in previous batches
+    /// Withdraw Juno that have finished unbonding in previous batches
     WithdrawUnbonded {
         receiver: Option<String>,
     },
@@ -50,11 +50,11 @@ pub enum ExecuteMsg {
     },
     /// Accept an ownership transfer
     AcceptOwnership {},
-    /// Claim staking rewards, swap all for Luna, and restake
+    /// Claim staking rewards, swap all for Juno, and restake
     Harvest {},
-    /// Use redelegations to balance the amounts of Luna delegated to validators
+    /// Use redelegations to balance the amounts of Juno delegated to validators
     Rebalance {},
-    /// Update Luna amounts in unbonding batches to reflect any slashing or rounding errors
+    /// Update Juno amounts in unbonding batches to reflect any slashing or rounding errors
     Reconcile {},
     /// Submit the current pending batch of unbonding requests to be unbonded
     SubmitBatch {},
@@ -75,7 +75,7 @@ pub enum ReceiveMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CallbackMsg {
-    /// Following the swaps, stake the Luna acquired to the whitelisted validators
+    /// Following the swaps, stake the Juno acquired to the whitelisted validators
     Reinvest {},
 }
 
@@ -127,7 +127,7 @@ pub struct ConfigResponse {
     pub owner: String,
     /// Pending ownership transfer, awaiting acceptance by the new owner
     pub new_owner: Option<String>,
-    /// Address of the Steak token
+    /// Address of the AquaX token
     pub steak_token: String,
     /// How often the unbonding queue is to be executed, in seconds
     pub epoch_period: u64,
@@ -139,11 +139,11 @@ pub struct ConfigResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StateResponse {
-    /// Total supply to the Steak token
-    pub total_usteak: Uint128,
-    /// Total amount of uluna staked
-    pub total_uluna: Uint128,
-    /// The exchange rate between usteak and uluna, in terms of uluna per usteak
+    /// Total supply to the AquaX token
+    pub total_uaquax: Uint128,
+    /// Total amount of ujuno staked
+    pub total_ujuno: Uint128,
+    /// The exchange rate between uaquax and ujuno, in terms of ujuno per uaquax
     pub exchange_rate: Decimal,
     /// Staking rewards currently held by the contract that are ready to be reinvested
     pub unlocked_coins: Vec<Coin>,
@@ -153,8 +153,8 @@ pub struct StateResponse {
 pub struct PendingBatch {
     /// ID of this batch
     pub id: u64,
-    /// Total amount of `usteak` to be burned in this batch
-    pub usteak_to_burn: Uint128,
+    /// Total amount of `uaquax` to be burned in this batch
+    pub uaquax_to_burn: Uint128,
     /// Estimated time when this batch will be submitted for unbonding
     pub est_unbond_start_time: u64,
 }
@@ -165,10 +165,10 @@ pub struct Batch {
     pub id: u64,
     /// Whether this batch has already been reconciled
     pub reconciled: bool,
-    /// Total amount of shares remaining this batch. Each `usteak` burned = 1 share
+    /// Total amount of shares remaining this batch. Each `uaquax` burned = 1 share
     pub total_shares: Uint128,
-    /// Amount of `uluna` in this batch that have not been claimed
-    pub uluna_unclaimed: Uint128,
+    /// Amount of `ujuno` in this batch that have not been claimed
+    pub ujuno_unclaimed: Uint128,
     /// Estimated time when this batch will finish unbonding
     pub est_unbond_end_time: u64,
 }

@@ -1,6 +1,6 @@
 # Scripts
 
-This directory contains scripts to deploy, migrate, or interact with Steak Hub smart contract.
+This directory contains scripts to deploy, migrate, or interact with AquaLabs Hub Hub smart contract.
 
 ## How to Use
 
@@ -21,16 +21,16 @@ To deploy the contract, create a JSON file containing the instantiation message,
 
 ```bash
 ts-node 2_deploy.ts \
-  --network mainnet|testnet|localterra \
+  --network mainnet|testnet|localwasmd \
   --key keyname \
   --msg /path/to/instantiate_msg.json
 ```
 
-To stake Luna and mint Steak:
+To stake Juno and mint AquaX:
 
 ```bash
 ts-node 4_bond.ts \
-  --network mainnet|testnet|localterra \
+  --network mainnet|testnet|localwasmd \
   --key keyname \
   --contract-address terra... \
   --amount 1000000

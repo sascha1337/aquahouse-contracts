@@ -10,7 +10,7 @@ pub(crate) struct State<'a> {
     pub owner: Item<'a, Addr>,
     /// Pending ownership transfer, awaiting acceptance by the new owner
     pub new_owner: Item<'a, Addr>,
-    /// Address of the Steak token
+    /// Address of the AquaX token
     pub steak_token: Item<'a, Addr>,
     /// How often the unbonding queue is to be executed
     pub epoch_period: Item<'a, u64>,

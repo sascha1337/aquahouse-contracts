@@ -28,21 +28,21 @@ pub fn state(deps: Deps, env: Env) -> StdResult<StateResponse> {
     let state = State::default();
 
     let steak_token = state.steak_token.load(deps.storage)?;
-    let total_usteak = query_cw20_total_supply(&deps.querier, &steak_token)?;
+    let total_uaquax = query_cw20_total_supply(&deps.querier, &steak_token)?;
 
     let validators = state.validators.load(deps.storage)?;
     let delegations = query_delegations(&deps.querier, &validators, &env.contract.address)?;
-    let total_uluna: u128 = delegations.iter().map(|d| d.amount).sum();
+    let total_ujuno: u128 = delegations.iter().map(|d| d.amount).sum();
 
-    let exchange_rate = if total_usteak.is_zero() {
+    let exchange_rate = if total_uaquax.is_zero() {
         Decimal::one()
     } else {
-        Decimal::from_ratio(total_uluna, total_usteak)
+        Decimal::from_ratio(total_ujuno, total_uaquax)
     };
 
     Ok(StateResponse {
-        total_usteak,
-        total_uluna: Uint128::new(total_uluna),
+        total_uaquax,
+        total_ujuno: Uint128::new(total_ujuno),
         exchange_rate,
         unlocked_coins: state.unlocked_coins.load(deps.storage)?,
     })

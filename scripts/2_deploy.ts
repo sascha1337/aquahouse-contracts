@@ -45,7 +45,7 @@ const argv = yargs(process.argv)
     "hub-binary": {
       type: "string",
       demandOption: false,
-      default: "../artifacts/steak_hub.wasm",
+      default: "../artifacts/aqualabs_hub.wasm",
     },
     "token-binary": {
       type: "string",

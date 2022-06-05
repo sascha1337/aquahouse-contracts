@@ -21,7 +21,7 @@ pub(crate) fn query_cw20_total_supply(
     Ok(token_info.total_supply)
 }
 
-/// Query the amounts of Luna a staker is delegating to a specific validator
+/// Query the amounts of Juno a staker is delegating to a specific validator
 pub(crate) fn query_delegation(
     querier: &QuerierWrapper,
     validator: &str,
@@ -33,7 +33,7 @@ pub(crate) fn query_delegation(
     })
 }
 
-/// Query the amounts of Luna a staker is delegating to each of the validators specified
+/// Query the amounts of Juno a staker is delegating to each of the validators specified
 pub(crate) fn query_delegations(
     querier: &QuerierWrapper,
     validators: &[String],

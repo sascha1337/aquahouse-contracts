@@ -31,7 +31,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             deps,
             env,
             receiver.map(|s| api.addr_validate(&s)).transpose()?.unwrap_or(info.sender),
-            parse_received_fund(&info.funds, "uluna")?,
+            parse_received_fund(&info.funds, "ujuno")?,
         ),
         ExecuteMsg::WithdrawUnbonded {
             receiver,
@@ -75,7 +75,7 @@ fn receive(
             let steak_token = state.steak_token.load(deps.storage)?;
             if info.sender != steak_token {
                 return Err(StdError::generic_err(
-                    format!("expecting Steak token, received {}", info.sender),
+                    format!("expecting AquaX token, received {}", info.sender),
                 ));
             }
 
